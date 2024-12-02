@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="单机围棋 - 支持本地对弈的围棋游戏，完整围棋规则">
+    <meta name="keywords" content="围棋,单机围棋,围棋游戏,本地对弈">
+    <title>单机围棋</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/inter/3.15.0/inter.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .game-screen {
+            height: calc(100vh - 64px);
+        }
+
+        /* 确保棋盘容器具有相对定位和合适的尺寸 */
+        .board-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #f5f5f5;
+        }
+
+        /* 设置棋盘画布样式 */
+        #goBoard {
+            background: #DEB887;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: relative;
+            max-width: 95%;
+            max-height: 95%;
+        }
+    </style>
+</head>
+<body class="bg-zinc-50 text-zinc-900">
+<!-- Header -->
+<header class="bg-white border-b border-zinc-200">
+    <div class="container mx-auto px-4 h-16 flex items-center justify-between">
+        <h1 class="text-xl font-semibold">单机围棋</h1>
+        <div class="flex gap-4">
+            <button class="text-sm text-zinc-600 hover:text-zinc-900"
+                    onclick="document.getElementById('features').scrollIntoView({behavior: 'smooth'})">
+                功能介绍
+            </button>
+            <button class="text-sm text-zinc-600 hover:text-zinc-900"
+                    onclick="document.getElementById('faq').scrollIntoView({behavior: 'smooth'})">
+                常见问题
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- Game container -->
+<main class="game-screen flex">
+    <!-- Board container -->
+    <div class="flex-1">
+        <div class="board-container">
+            <canvas id="goBoard"></canvas>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="w-72 bg-white border-l border-zinc-200 p-4 flex flex-col">
+        <div class="mb-4 p-3 bg-zinc-50 rounded-lg">
+            <div class="text-sm text-zinc-600 mb-2">当前回合</div>
+            <div id="currentPlayer" class="font-medium">黑棋</div>
+        </div>
+
+        <div class="mb-4 p-3 bg-zinc-50 rounded-lg">
+            <div class="text-sm text-zinc-600 mb-2">计时器</div>
+            <div class="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                    <div class="text-zinc-600">黑方</div>
+                    <div id="blackTimer" class="font-medium">30:00</div>
+                </div>
+                <div>
+                    <div class="text-zinc-600">白方</div>
+                    <div id="whiteTimer" class="font-medium">30:00</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-4 p-3 bg-zinc-50 rounded-lg">
+            <div class="text-sm text-zinc-600 mb-2">提子数</div>
+            <div class="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                    <div class="text-zinc-600">黑方</div>
+                    <div id="blackCaptures" class="font-medium">0</div>
+                </div>
+                <div>
+                    <div class="text-zinc-600">白方</div>
+                    <div id="whiteCaptures" class="font-medium">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-auto space-y-2">
+            <button onclick="undoMove()"
+                    class="w-full px-4 py-2 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">
+                悔棋 (Ctrl+Z)
+            </button>
+            <button onclick="pass()"
+                    class="w-full px-4 py-2 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">
+                PASS (P)
+            </button>
+            <button onclick="calculateTerritory()"
+                    class="w-full px-4 py-2 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors">
+                计算领地
+            </button>
+            <button onclick="resetGame()"
+                    class="w-full px-4 py-2 bg-black text-white hover:bg-zinc-800 rounded-lg transition-colors">
+                重新开始
+            </button>
+        </div>
+    </div>
+</main>
+
+<!-- Features section -->
+<section id="features" class="py-16 bg-white">
+    <div class="container mx-auto px-4">
+        <h2 class="text-2xl font-semibold mb-8 text-center">功能特点</h2>
+        <div class="grid md:grid-cols-3 gap-8">
+            <div class="p-6 bg-zinc-50 rounded-lg">
+                <h3 class="font-medium mb-2">单机对弈</h3>
+                <p class="text-sm text-zinc-600">无需网络连接，随时随地开始对弈</p>
+            </div>
+            <div class="p-6 bg-zinc-50 rounded-lg">
+                <h3 class="font-medium mb-2">完整规则</h3>
+                <p class="text-sm text-zinc-600">支持提子、打劫、计算领地等标准规则</p>
+            </div>
+            <div class="p-6 bg-zinc-50 rounded-lg">
+                <h3 class="font-medium mb-2">本地存储</h3>
+                <p class="text-sm text-zinc-600">对局数据保存在本地，保护隐私</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FAQ section -->
+<section id="faq" class="py-16 bg-zinc-50">
+    <div class="container mx-auto px-4">
+        <h2 class="text-2xl font-semibold mb-8 text-center">常见问题</h2>
+        <div class="max-w-2xl mx-auto space-y-4">
+            <div class="p-6 bg-white rounded-lg">
+                <h3 class="font-medium mb-2">快捷键说明</h3>
+                <p class="text-sm text-zinc-600">支持 Ctrl+Z 悔棋，P 键 PASS</p>
+            </div>
+            <div class="p-6 bg-white rounded-lg">
+                <h3 class="font-medium mb-2">如何计算胜负？</h3>
+                <p class="text-sm text-zinc-600">双方 PASS 后点击"计算领地"，系统自动计算并加入贴目(6.5目)</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="py-8 bg-white border-t border-zinc-200">
+    <div class="container mx-auto px-4">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="text-sm text-zinc-600">
+                © 2024 单机围棋
+            </div>
+            <div class="flex gap-6">
+                <a href="https://pomodiary.com" target="_blank" rel="noopener noreferrer"
+                   class="text-sm text-zinc-600 hover:text-zinc-900">
+                    个人网站
+                </a>
+                <a href="https://chatpaper.ai" target="_blank" rel="noopener noreferrer"
+                   class="text-sm text-zinc-600 hover:text-zinc-900">
+                    ChatPaper
+                </a>
+                <a href="https://x.com/benshandebiao" target="_blank" rel="noopener noreferrer"
+                   class="text-sm text-zinc-600 hover:text-zinc-900">
+                    联系作者
+                </a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script>
+    // [Previous JavaScript code remains exactly the same]
+
+    // 修改 resizeCanvas 函数来保持棋盘的正方形比例
+    function resizeCanvas() {
+        const container = document.querySelector('.board-container');
+        const size = Math.min(container.clientWidth, container.clientHeight) - 40;
+        canvas.width = size;
+        canvas.height = size;
+        cellSize = (size - 40) / (boardSize - 1);
+        margin = 20;
+        drawBoard();
+    }
+
+    // 确保在页面加载和窗口调整时重新计算棋盘尺寸
+    window.addEventListener('load', resizeCanvas);
+    window.addEventListener('resize', resizeCanvas);
+
+    const canvas = document.getElementById('goBoard');
+    const ctx = canvas.getContext('2d');
+    let boardSize = 19;
+    let cellSize;
+    let margin;
+    let currentPlayer = 'black';
+    let gameBoard = Array(boardSize).fill().map(() => Array(boardSize).fill(null));
+    let moveHistory = [];
+    let consecutivePasses = 0;
+    let captures = {black: 0, white: 0};
+    let timer = {
+        black: 1800, // 30分钟
+        white: 1800,
+        interval: null
+    };
+    let gameEnded = false;
+
+    // 初始化和棋盘绘制
+    function resizeCanvas() {
+        const containerWidth = document.querySelector('.board-container').clientWidth;
+        const containerHeight = document.querySelector('.board-container').clientHeight;
+        const size = Math.min(containerWidth, containerHeight) - 40;
+        canvas.width = size;
+        canvas.height = size;
+        cellSize = (size - 40) / (boardSize - 1);
+        margin = 20;
+        drawBoard();
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function drawBoard() {
+        ctx.fillStyle = '#DEB887';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.beginPath();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+
+        for (let i = 0; i < boardSize; i++) {
+            ctx.moveTo(margin, margin + i * cellSize);
+            ctx.lineTo(canvas.width - margin, margin + i * cellSize);
+            ctx.moveTo(margin + i * cellSize, margin);
+            ctx.lineTo(margin + i * cellSize, canvas.height - margin);
+        }
+        ctx.stroke();
+
+        const starPoints = [3, 9, 15];
+        ctx.fillStyle = '#000';
+        for (let i of starPoints) {
+            for (let j of starPoints) {
+                ctx.beginPath();
+                ctx.arc(margin + i * cellSize, margin + j * cellSize, 3, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+
+        for (let i = 0; i < boardSize; i++) {
+            for (let j = 0; j < boardSize; j++) {
+                if (gameBoard[i][j]) {
+                    drawStone(i, j, gameBoard[i][j]);
+                }
+            }
+        }
+    }
+
+    function drawStone(row, col, color) {
+        ctx.beginPath();
+        ctx.arc(
+            margin + col * cellSize,
+            margin + row * cellSize,
+            cellSize * 0.45,
+            0,
+            2 * Math.PI
+        );
+        ctx.fillStyle = color === 'black' ? '#000' : '#fff';
+        ctx.fill();
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+
+    // 计时器功能
+    function startTimer() {
+        if (timer.interval) clearInterval(timer.interval);
+        timer.interval = setInterval(() => {
+            if (!gameEnded) {
+                if (currentPlayer === 'black') {
+                    timer.black--;
+                } else {
+                    timer.white--;
+                }
+                updateTimerDisplay();
+
+                if (timer.black <= 0 || timer.white <= 0) {
+                    endGame(timer.black <= 0 ? 'white' : 'black');
+                }
+            }
+        }, 1000);
+    }
+
+    function updateTimerDisplay() {
+        document.getElementById('blackTimer').textContent =
+            `${Math.floor(timer.black / 60)}:${(timer.black % 60).toString().padStart(2, '0')}`;
+        document.getElementById('whiteTimer').textContent =
+            `${Math.floor(timer.white / 60)}:${(timer.white % 60).toString().padStart(2, '0')}`;
+    }
+
+    // 提子规则
+    function getConnectedStones(row, col, color) {
+        const connected = new Set();
+        const stack = [[row, col]];
+
+        while (stack.length > 0) {
+            const [r, c] = stack.pop();
+            const key = `${r},${c}`;
+
+            if (connected.has(key)) continue;
+            connected.add(key);
+
+            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            for (const [dr, dc] of directions) {
+                const newR = r + dr;
+                const newC = c + dc;
+
+                if (newR >= 0 && newR < boardSize && newC >= 0 && newC < boardSize &&
+                    gameBoard[newR][newC] === color) {
+                    stack.push([newR, newC]);
+                }
+            }
+        }
+
+        return connected;
+    }
+
+    function hasLiberties(stones) {
+        for (const pos of stones) {
+            const [row, col] = pos.split(',').map(Number);
+            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+
+            for (const [dr, dc] of directions) {
+                const newR = row + dr;
+                const newC = col + dc;
+
+                if (newR >= 0 && newR < boardSize && newC >= 0 && newC < boardSize &&
+                    gameBoard[newR][newC] === null) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    function captureStones(stones) {
+        let count = 0;
+        for (const pos of stones) {
+            const [row, col] = pos.split(',').map(Number);
+            gameBoard[row][col] = null;
+            count++;
+        }
+        return count;
+    }
+
+    function checkCaptures(row, col, color) {
+        const oppositeColor = color === 'black' ? 'white' : 'black';
+        let captureCount = 0;
+
+        const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+        for (const [dr, dc] of directions) {
+            const newR = row + dr;
+            const newC = col + dc;
+
+            if (newR >= 0 && newR < boardSize && newC >= 0 && newC < boardSize &&
+                gameBoard[newR][newC] === oppositeColor) {
+                const group = getConnectedStones(newR, newC, oppositeColor);
+                if (!hasLiberties(group)) {
+                    captureCount += captureStones(group);
+                }
+            }
+        }
+
+        return captureCount;
+    }
+
+    // 领地计算
+    function calculateTerritory() {
+        if (consecutivePasses < 2) {
+            alert('双方都需要PASS才能计算领地');
+            return;
+        }
+
+        const territory = {black: 0, white: 0};
+        const visited = new Set();
+
+        for (let i = 0; i < boardSize; i++) {
+            for (let j = 0; j < boardSize; j++) {
+                if (gameBoard[i][j] === null && !visited.has(`${i},${j}`)) {
+                    const region = new Set();
+                    const color = determineTerritory(i, j, region, visited);
+                    if (color) {
+                        territory[color] += region.size;
+                    }
+                }
+            }
+        }
+
+        const finalScore = {
+            black: territory.black + captures.black,
+            white: territory.white + captures.white + 6.5 // 贴目
+        };
+
+        const winner = finalScore.black > finalScore.white ? 'black' : 'white';
+        const margin = Math.abs(finalScore.black - finalScore.white);
+
+        alert(`游戏结束！\n黑方得分: ${finalScore.black}\n白方得分: ${finalScore.white}\n` +
+            `${winner === 'black' ? '黑方' : '白方'}胜${margin.toFixed(1)}目`);
+    }
+
+    function determineTerritory(row, col, region, visited) {
+        const stack = [[row, col]];
+        let surroundingBlack = 0;
+        let surroundingWhite = 0;
+
+        while (stack.length > 0) {
+            const [r, c] = stack.pop();
+            const key = `${r},${c}`;
+
+            if (visited.has(key)) continue;
+            visited.add(key);
+            region.add(key);
+
+            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            for (const [dr, dc] of directions) {
+                const newR = r + dr;
+                const newC = c + dc;
+
+                if (newR >= 0 && newR < boardSize && newC >= 0 && newC < boardSize) {
+                    if (gameBoard[newR][newC] === null && !visited.has(`${newR},${newC}`)) {
+                        stack.push([newR, newC]);
+                    } else if (gameBoard[newR][newC] === 'black') {
+                        surroundingBlack++;
+                    } else if (gameBoard[newR][newC] === 'white') {
+                        surroundingWhite++;
+                    }
+                }
+            }
+        }
+
+        if (surroundingBlack > 0 && surroundingWhite === 0) return 'black';
+        if (surroundingWhite > 0 && surroundingBlack === 0) return 'white';
+        return null;
+    }
+
+    // 游戏控制
+    function getBoardPosition(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+
+        const col = Math.round((x - margin) / cellSize);
+        const row = Math.round((y - margin) / cellSize);
+
+        if (col >= 0 && col < boardSize && row >= 0 && row < boardSize) {
+            return {row, col};
+        }
+        return null;
+    }
+
+    function placeStone(row, col) {
+        if (gameEnded || gameBoard[row][col] !== null) return;
+
+        // 临时放置棋子以检查自杀规则
+        gameBoard[row][col] = currentPlayer;
+        const group = getConnectedStones(row, col, currentPlayer);
+        const capturedCount = checkCaptures(row, col, currentPlayer);
+
+        if (!hasLiberties(group) && capturedCount === 0) {
+            // 自杀位，撤销落子
+            gameBoard[row][col] = null;
+            return;
+        }
+
+        moveHistory.push({
+            row,
+            col,
+            color: currentPlayer,
+            captured: capturedCount
+        });
+
+        captures[currentPlayer] += capturedCount;
+        updateCapturesDisplay();
+
+        consecutivePasses = 0;
+        currentPlayer = currentPlayer === 'black' ? 'white' : 'black';
+        document.getElementById('currentPlayer').textContent =
+            currentPlayer === 'black' ? '黑棋' : '白棋';
+
+        drawBoard();
+    }
+
+    function pass() {
+        if (gameEnded) return;
+
+        consecutivePasses++;
+        moveHistory.push({
+            pass: true,
+            color: currentPlayer
+        });
+
+        if (consecutivePasses === 2) {
+            calculateTerritory();
+        }
+
+        currentPlayer = currentPlayer === 'black' ? 'white' : 'black';
+        document.getElementById('currentPlayer').textContent =
+            currentPlayer === 'black' ? '黑棋' : '白棋';
+        drawBoard();
+    }
+
+    function undoMove() {
+        if (gameEnded || moveHistory.length === 0) return;
+
+        const lastMove = moveHistory.pop();
+        if (lastMove.pass) {
+            consecutivePasses--;
+        } else {
+            gameBoard[lastMove.row][lastMove.col] = null;
+            if (lastMove.captured > 0) {
+                captures[lastMove.color] -= lastMove.captured;
+                updateCapturesDisplay();
+            }
+        }
+
+        currentPlayer = lastMove.color;
+        document.getElementById('currentPlayer').textContent =
+            currentPlayer === 'black' ? '黑棋' : '白棋';
+
+        drawBoard();
+    }
+
+    function updateCapturesDisplay() {
+        document.getElementById('blackCaptures').textContent = captures.black;
+        document.getElementById('whiteCaptures').textContent = captures.white;
+    }
+
+    function endGame(winner) {
+        gameEnded = true;
+        clearInterval(timer.interval);
+        alert(`游戏结束！${winner === 'black' ? '黑方' : '白方'}胜利！`);
+    }
+
+    function resetGame() {
+        gameBoard = Array(boardSize).fill().map(() => Array(boardSize).fill(null));
+        moveHistory = [];
+        consecutivePasses = 0;
+        currentPlayer = 'black';
+        captures = {black: 0, white: 0};
+        gameEnded = false;
+
+        // 重置计时器
+        timer.black = 1800;
+        timer.white = 1800;
+        updateTimerDisplay();
+        startTimer();
+
+        document.getElementById('currentPlayer').textContent = '黑棋';
+        updateCapturesDisplay();
+        drawBoard();
+    }
+
+    // 键盘快捷键
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'z' && e.ctrlKey) {
+            undoMove(); // Ctrl+Z 悔棋
+        } else if (e.key === 'p') {
+            pass(); // P键Pass
+        }
+    });
+
+    // 鼠标事件
+    canvas.addEventListener('click', (e) => {
+        const pos = getBoardPosition(e.clientX, e.clientY);
+        if (pos) {
+            placeStone(pos.row, pos.col);
+        }
+    });
+
+    // 初始化游戏
+    startTimer();
+</script>
+
+</body>
+</html>
